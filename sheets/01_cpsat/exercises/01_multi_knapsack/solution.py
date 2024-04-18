@@ -64,7 +64,7 @@ class MultiKnapsackSolver:
         for j in range(len(self.capacities)):
             sacks = []
             for i in range(len(self.items)):
-                if(self.solver.value(self.x[i][j]) == 1):
+                if(self.solver.Value(self.x[i][j]) == 1):
                     sacks.append(self.items[i])
             
             knapsacks.append(sacks)
