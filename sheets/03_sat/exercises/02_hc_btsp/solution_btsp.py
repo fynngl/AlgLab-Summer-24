@@ -36,10 +36,10 @@ class BottleneckTSPSolver:
         Check the networkx documentation for more information!
         """
         self.graph = graph
-        # TODO: Implement me!
+        self.sorted_edges = sorted(self.graph.edges(data="weight"), key=lambda t: t[2])
 
     def lower_bound(self) -> float:
-        # TODO: Implement me!
+        pass
 
     def optimize_bottleneck(
         self,
@@ -49,6 +49,16 @@ class BottleneckTSPSolver:
         """
         Find the optimal bottleneck tsp tour.
         """
-
+        l = len(self.graph.nodes) - 1
+        u = len(self.graph.edges) - 1
         self.timer = Timer(time_limit)
-        # TODO: Implement me!
+        while(l != u):
+            edge_list = [(u, v) for (u, v,data) in self.sorted_edges[0:int((u-l)/2+l)]]
+            hamilton = HamiltonianCycleModel(self.graph.edge_subgraph(edge_list))
+            solved = hamilton.solve()
+            if solved == None:
+                l = int((u-l)/2+l+1)
+            else:
+                solution = solved
+                u = int((u-l)/2+l)
+        return solution
