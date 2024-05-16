@@ -1,10 +1,11 @@
 """
 Implement the Dantzig-Fulkerson-Johnson formulation for the TSP.
-"""
+"""#ramwe7-Nikjyg-fizrum
 
 import typing
 
 import gurobipy as gp
+from gurobipy import GRB
 import networkx as nx
 
 
@@ -27,43 +28,56 @@ class GurobiTspRelaxationSolver:
         assert all(
             weight > 0 for _, _, weight in G.edges.data("weight", default=None)
         ), "Invalid graph"
-        self._model = gp.Model()
-        # TODO: Implement me!
+        self.model = gp.Model()
+        self.sorted_edges = list(self.graph.edges)
+        self.x = [self.model.addVar(vtype=GRB.CONTINUOUS, name=f"x_{u},{v}", ub=1, lb=0) for u,v in self.sorted_edges]
+        self.model.update()
+        self.vars = {self.sorted_edges[i]: self.x[i] for i in range(len(self.x))}
+        self.vars.update({(v,u): var for (u,v), var in self.vars.items()})
+        for v in self.graph.nodes:
+            connections = [self.vars[e] for e in self.graph.edges if v in e]
+            self.model.addConstr(sum(connections) == 2)
+        self.model.setObjective(gp.quicksum(weight * self.vars[u,v] for (u,v,weight) in self.graph.edges(data="weight")), GRB.MINIMIZE)
 
 
     def get_lower_bound(self) -> float:
         """
         Return the current lower bound.
         """
-        # TODO: Implement me!
+        return self.model.ObjBound
 
     def get_solution(self) -> typing.Optional[nx.Graph]:
         """
         Return the current solution as a graph.
-
-        The solution should be a networkx Graph were the
-        fractional value of the edge is stored in the "x" attribute.
-        You do not have to add edges with x=0.
-
-        ```python
-        graph = nx.Graph()
-        graph.add_edge(0, 1, x=0.5)
-        graph.add_edge(1, 2, x=1.0)
-        ```
         """
-        # TODO: Implement me!
+        if self.model.status == GRB.OPTIMAL:
+            selected = [(u,v) for (u,v) in self.graph.edges if self.vars[(u,v)].X > 0.01]
+            return self.graph.edge_subgraph(selected)
 
     def get_objective(self) -> typing.Optional[float]:
         """
         Return the objective value of the last solution.
         """
-        # TODO: Implement me!
+        return round(self.model.ObjVal)
 
     def solve(self) -> None:
         """
         Solve the model and return the objective value and the lower bound.
         """
         # Set parameters for the solver.
-        self._model.Params.LogToConsole = 1
-
-        # TODO: Implement me!
+        self.model.Params.LogToConsole = 1
+        while True:
+            self.model.optimize()
+            selected = [(u,v) for (u,v) in self.graph.edges if self.vars[(u,v)].X >= 0.01]
+            solution = self.graph.edge_subgraph(selected)
+            comps = list(nx.connected_components(solution))
+            if len(comps) > 1:
+                for c in comps:
+                        edges = [e for e in self.graph.edges if (e[0] in c) ^ (e[1] in c)]
+                        if len(edges) > 0:
+                            #print(f"sum: {sum(self.vars[edge].X for edge in edges)}")
+                            self.model.addConstr(sum(self.vars[edge] for edge in edges) >= 2)
+            else:
+                if self.model.status == GRB.OPTIMAL:
+                    selected = [(u,v) for (u,v) in self.graph.edges if self.vars[(u,v)].X >= 0.01]
+                    return self.graph.edge_subgraph(selected)
