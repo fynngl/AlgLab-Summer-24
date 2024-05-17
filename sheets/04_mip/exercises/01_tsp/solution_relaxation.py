@@ -81,7 +81,6 @@ class GurobiTspRelaxationSolver:
                 if self.model.status == GRB.OPTIMAL:
                     #selected = [(u,v) for (u,v) in self.graph.edges if self.vars[(u,v)].X >= 0.01]
                     solution = nx.Graph()
-                    for (u,v) in self.graph.edges:
-                        #if self.vars[(u,v)].X >= 0.01:
-                        solution.add_edge(u, v, x=self.vars[(u,v)].X)
+                    for edge in self.graph.edges:
+                        nx.set_edge_attributes(solution, self.vars[edge].X, "x")
                     return solution
