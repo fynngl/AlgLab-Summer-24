@@ -79,5 +79,9 @@ class GurobiTspRelaxationSolver:
                             self.model.addConstr(sum(self.vars[edge] for edge in edges) >= 2)
             else:
                 if self.model.status == GRB.OPTIMAL:
-                    selected = [(u,v) for (u,v) in self.graph.edges if self.vars[(u,v)].X >= 0.01]
-                    return self.graph.edge_subgraph(selected)
+                    #selected = [(u,v) for (u,v) in self.graph.edges if self.vars[(u,v)].X >= 0.01]
+                    solution = nx.Graph()
+                    for (u,v) in self.graph.edges:
+                        #if self.vars[(u,v)].X >= 0.01:
+                        solution.add_edge(u, v, x=self.vars[(u,v)].X)
+                    return solution
