@@ -35,10 +35,6 @@ class GurobiTspRelaxationSolver:
         self.vars = {self.sorted_edges[i]: self.x[i] for i in range(len(self.x))}
         self.vars.update({(v,u): var for (u,v), var in self.vars.items()})
         nx.set_edge_attributes(self.graph, self.vars, "x")
-        #for u,v, attrs in self.graph.edges(data=True):
-            #if self.graph[u][v]["x"] == None:
-                        #print("edge:", (u,v))
-                        #print("Attributes:", attrs)
         for v in self.graph.nodes:
             connections = [self.vars[e] for e in self.graph.edges if v in e]
             self.model.addConstr(sum(connections) == 2)
@@ -56,8 +52,10 @@ class GurobiTspRelaxationSolver:
         Return the current solution as a graph.
         """
         if self.model.status == GRB.OPTIMAL:
-            selected = [(u,v) for (u,v) in self.graph.edges if self.vars[(u,v)].X > 0.01]
-            return self.graph.edge_subgraph(selected)
+            solution = nx.Graph()
+            for u,v in self.graph.edges:
+                solution.add_edge(u,v,x=self.vars[(u,v)].X)
+            return solution
 
     def get_objective(self) -> typing.Optional[float]:
         """
@@ -80,13 +78,7 @@ class GurobiTspRelaxationSolver:
                 for c in comps:
                         edges = [e for e in self.graph.edges if (e[0] in c) ^ (e[1] in c)]
                         if len(edges) > 0:
-                            #print("add")
-                            #print(f"sum: {sum(self.vars[edge] for edge in edges) >= 2}")
                             self.model.addConstr(sum(self.vars[edge] for edge in edges) >= 2)
             else:
                 if self.model.status == GRB.OPTIMAL:
-                    #for u,v, attrs in self.graph.edges(data=True):
-                        #print("edge:", (u,v))
-                        #print("Attributes:", attrs)
-                #return solution
                     return self.graph.edges
