@@ -22,7 +22,6 @@ class MiningRoutingSolver:
         edge_list = list(self.graph.edges)   
         self.x = [self.model.addVar(vtype=GRB.BINARY, name=f"x_{u}_{v}") for (u,v) in self.graph.edges]
         self.y = [self.model.addVar(vtype=GRB.INTEGER, name=f"x_{u}_{v}", lb=0, ub=self.graph[u][v]["capacity"]) for (u,v) in self.graph.edges]
-        self.max_flow = 0
 
         self.vars = {edge_list[i]: self.x[i] for i in range(len(self.x))}
         self.usage = {edge_list[i]: self.y[i] for i in range(len(self.y))} 
@@ -31,8 +30,9 @@ class MiningRoutingSolver:
             direct_1 = self.vars[(u,v)]
             direct_2 = self.vars[(v,u)]
             self.model.addConstr(direct_1 + direct_2 <= 1)
+            self.model.addConstr(self.usage[(u,v)] - self.vars[(u,v)] < self.usage[(u,v)])
         self.model.addConstr(gb.quicksum(self.x[i] * self.graph[edge_list[i][0]][edge_list[i][1]]["cost"] for i in range(len(self.graph.edges))) <= instance.budget)
-        self.model.setObjective(sum(self.vars[(u,v)] * self.usage[(u,v)] for (u,v) in self.graph.edges if v == self.map.elevator.id), GRB.MAXIMIZE)
+        self.model.setObjective(sum(self.usage[(u,v)] for (u,v) in self.graph.edges if v == self.map.elevator.id), GRB.MAXIMIZE)
             
         
 
@@ -48,8 +48,6 @@ class MiningRoutingSolver:
         self.model.Params.LogToConsole = 1
         self.model.Params.lazyConstraints = 1
         
-        flow_dict = {}
-        solution_edges = []
         output = []
         
         for v,data in self.graph.nodes(data=True):
@@ -71,7 +69,7 @@ class MiningRoutingSolver:
         if self.model.status == GRB.OPTIMAL:
             for v in self.graph.nodes:
                 for u in self.graph.nodes:
-                    if (u,v) in solution_edges:
-                        output.append(((v, u), flow_dict[v][u]))
+                    if (u,v) in self.graph.edges:
+                        output.append(((v, u), self.usage[(u,v)]))
             print(output)
             return output
